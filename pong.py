@@ -21,7 +21,7 @@ class Menu:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        return  # inicia o jogo
+                        return
 
             self.screen.fill(BLACK)
 
@@ -37,7 +37,6 @@ class Menu:
             pygame.display.flip()
 
 class raquete:
-
 
     def __init__(self, x, y, width=10, height=60, speed=5):
         self.rect = pygame.Rect(x, y, width, height)
@@ -77,7 +76,6 @@ class Bola:
     def draw(self, screen):
         pygame.draw.circle(screen, WHITE, self.rect.center, self.size)
 
-
 class Game:
 
     def __init__(self):
@@ -100,14 +98,14 @@ class Game:
         if keys[pygame.K_DOWN]:
             self.player.move(1)
 
-    def enemy_ai(self):
-        """IA simples"""
+    def player_2(self):
+       
         if self.enemy.rect.centery < self.ball.rect.centery:
             self.enemy.move(1)
         else:
             self.enemy.move(-1)
 
-    def check_collisions(self):
+    def colisao(self):
         if self.ball.rect.top <= 0 or self.ball.rect.bottom >= HEIGHT:
             self.ball.bounce_y()
 
@@ -115,7 +113,7 @@ class Game:
            self.ball.rect.colliderect(self.enemy.rect):
             self.ball.bounce_x()
 
-    def check_score(self):
+    def pontuacao(self):
         if self.ball.rect.left <= 0:
             self.score_enemy += 1
             self.ball.reset()
@@ -140,7 +138,6 @@ class Game:
         pygame.display.flip()
 
     def run(self):
-        """Loop principal"""
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -148,10 +145,10 @@ class Game:
                     sys.exit()
 
             self.handle_input()
-            self.enemy_ai()
+            self.player_2()
             self.ball.move()
-            self.check_collisions()
-            self.check_score()
+            self.colisao()
+            self.pontuacao()
             self.draw()
 
             self.clock.tick(60)
