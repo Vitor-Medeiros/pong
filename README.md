@@ -45,10 +45,10 @@ Inicia o jogo
 2. O usuário pressiona **ESPAÇO**
 3. O jogo começa
 4. Durante o jogo:
-   Entrada do jogador é processada
-   Bola se movimenta
-   Colisões são detectadas
-    Pontuação é atualizada
+  - Entrada do jogador é processada
+  - Bola se movimenta
+  - Colisões são detectadas
+  - Pontuação é atualizada
 5. O loop continua até o usuário sair
 
 ---
