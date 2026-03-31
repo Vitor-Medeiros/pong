@@ -1,4 +1,6 @@
 import pygame
+import random
+import math
 import sys
 
 WIDTH, HEIGHT = 800, 600
@@ -48,28 +50,38 @@ class Raquete:
         pygame.draw.rect(screen, WHITE, self.rect)
 
 class Bola:
-    def __init__(self, size=7, speed=5):
+    def __init__(self, size=7, speed=5, color=WHITE, real=True):
         self.size = size
         self.rect = pygame.Rect(WIDTH // 2, HEIGHT // 2, size, size)
         self.speed_x = speed
         self.speed_y = speed
+        self.color = color
+        self.real = real
 
     def move(self):
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
 
     def bounce_y(self):
-        self.speed_y *= -1
+        speed = math.hypot(self.speed_x, self.speed_y)
+        angle = random.uniform(-math.pi / 4, math.pi / 4)
+        direction = -1 if self.speed_y > 0 else 1
+        self.speed_y = direction * speed * math.cos(angle)
+        self.speed_x = speed * math.sin(angle)
 
     def bounce_x(self):
-        self.speed_x *= -1
+        speed = math.hypot(self.speed_x, self.speed_y)
+        angle = random.uniform(-math.pi / 4, math.pi / 4)
+        direction = -1 if self.speed_x > 0 else 1
+        self.speed_x = direction * speed * math.cos(angle)
+        self.speed_y = speed * math.sin(angle)
 
     def reset(self):
         self.rect.center = (WIDTH // 2, HEIGHT // 2)
         self.bounce_x()
 
     def draw(self, screen):
-        pygame.draw.circle(screen, WHITE, self.rect.center, self.size)
+        pygame.draw.circle(screen, self.color, self.rect.center, self.size)
 
 class Game:
     def __init__(self):
@@ -79,7 +91,9 @@ class Game:
 
         self.player = Raquete(15, HEIGHT // 2 - 30)
         self.enemy = Raquete(WIDTH - 25, HEIGHT // 2 - 30)
-        self.ball = Bola()
+
+        self.balls = [Bola()]
+        self.last_spawn_time = 0
 
         self.score_player = 0
         self.score_enemy = 0
@@ -96,6 +110,25 @@ class Game:
         pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.play(-1)
 
+    def spawn_balls(self, original_ball):
+        for _ in range(3):
+            new_ball = Bola(
+                color=(
+                    random.randint(0,255),
+                    random.randint(0,255),
+                    random.randint(0,255)
+                ),
+                real=False
+            )
+            new_ball.rect.center = original_ball.rect.center
+            new_ball.speed_x = original_ball.speed_x * random.choice([-1, 1])
+            new_ball.speed_y = original_ball.speed_y * random.choice([-1, 1])
+            self.balls.append(new_ball)
+
+    def reset_balls(self):
+        self.balls = [Bola()]
+        self.last_spawn_time = 0
+
     def handle_input(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
@@ -104,38 +137,54 @@ class Game:
             self.player.move(1)
 
     def player_2(self):
-        if self.enemy.rect.centery < self.ball.rect.centery:
+        ball = self.balls[0]
+        if self.enemy.rect.centery < ball.rect.centery:
             self.enemy.move(1)
         else:
             self.enemy.move(-1)
 
     def colisao(self):
-        if self.ball.rect.top <= 0 or self.ball.rect.bottom >= HEIGHT:
-            self.ball.bounce_y()
-            self.sound_wall.play()
+        current_time = pygame.time.get_ticks()
 
-        if self.ball.rect.colliderect(self.player.rect) or \
-           self.ball.rect.colliderect(self.enemy.rect):
-            self.ball.bounce_x()
-            self.sound_hit.play()
+        for ball in self.balls:
+            if ball.rect.top <= 0 or ball.rect.bottom >= HEIGHT:
+                ball.bounce_y()
+                self.sound_wall.play()
+
+            if ball.rect.colliderect(self.player.rect) or \
+               ball.rect.colliderect(self.enemy.rect):
+
+                ball.bounce_x()
+                self.sound_hit.play()
+
+                if ball.real and (self.last_spawn_time == 0 or current_time - self.last_spawn_time >= 5000):
+                    self.spawn_balls(ball)
+                    self.last_spawn_time = current_time
+                    break
 
     def pontuacao(self):
-        if self.ball.rect.left <= 0:
-            self.score_enemy += 1
-            self.sound_score.play()
-            self.ball.reset()
+        for ball in self.balls:
+            if not ball.real:
+                continue
 
-        if self.ball.rect.right >= WIDTH:
-            self.score_player += 1
-            self.sound_score.play()
-            self.ball.reset()
+            if ball.rect.left <= 0:
+                self.score_enemy += 1
+                self.sound_score.play()
+                self.reset_balls()
+
+            if ball.rect.right >= WIDTH:
+                self.score_player += 1
+                self.sound_score.play()
+                self.reset_balls()
 
     def draw(self):
         self.screen.fill(BLACK)
 
         self.player.draw(self.screen)
         self.enemy.draw(self.screen)
-        self.ball.draw(self.screen)
+
+        for ball in self.balls:
+            ball.draw(self.screen)
 
         font = pygame.font.SysFont(None, 36)
         score_text = font.render(
@@ -154,7 +203,10 @@ class Game:
 
             self.handle_input()
             self.player_2()
-            self.ball.move()
+
+            for ball in self.balls:
+                ball.move()
+
             self.colisao()
             self.pontuacao()
             self.draw()
